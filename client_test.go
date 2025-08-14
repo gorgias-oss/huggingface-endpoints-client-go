@@ -224,3 +224,116 @@ func TestOptionalFields(t *testing.T) {
 		panic(err)
 	}
 }
+
+func TestTeiImage(t *testing.T) {
+	endpoint := newCreateEndpointRequest()
+	endpoint.Model.Image.Huggingface = nil
+	endpoint.Model.Image.Tei = &Tei{
+		URL:                   "ghcr.io/huggingface/text-embeddings-inference:1.2",
+		MaxBatchTokens:        &[]int{8192}[0],
+		MaxConcurrentRequests: &[]int{512}[0],
+		Pooling:               &[]string{"mean"}[0],
+	}
+
+	_, err := client.CreateEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.DeleteEndpoint(endpoint.Name)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestTgiImage(t *testing.T) {
+	endpoint := newCreateEndpointRequest()
+	endpoint.Model.Image.Huggingface = nil
+	endpoint.Model.Image.Tgi = &Tgi{
+		URL:                   "ghcr.io/huggingface/text-generation-inference:1.4",
+		MaxBatchPrefillTokens: &[]int{4096}[0],
+		MaxBatchTotalTokens:   &[]int{8192}[0],
+		MaxInputLength:        &[]int{4096}[0],
+		MaxTotalTokens:        &[]int{8192}[0],
+		Quantize:              &[]string{"bitsandbytes"}[0],
+	}
+
+	_, err := client.CreateEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.DeleteEndpoint(endpoint.Name)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestTgiNeuronImage(t *testing.T) {
+	endpoint := newCreateEndpointRequest()
+	endpoint.Model.Image.Huggingface = nil
+	endpoint.Model.Image.TgiNeuron = &TgiNeuron{
+		URL:                   "ghcr.io/huggingface/neuronx-tgi:0.0.15",
+		MaxBatchPrefillTokens: &[]int{4096}[0],
+		MaxBatchTotalTokens:   &[]int{8192}[0],
+		MaxInputLength:        &[]int{4096}[0],
+		MaxTotalTokens:        &[]int{8192}[0],
+		HfAutoCastType:        &[]string{"bf16"}[0],
+		HfNumCores:            &[]int{2}[0],
+	}
+
+	_, err := client.CreateEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.DeleteEndpoint(endpoint.Name)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestLlamacppImage(t *testing.T) {
+	endpoint := newCreateEndpointRequest()
+	endpoint.Model.Image.Huggingface = nil
+	endpoint.Model.Image.Llamacpp = &Llamacpp{
+		URL:         "ghcr.io/ggerganov/llama.cpp:server",
+		ModelPath:   "/app/model.gguf",
+		CtxSize:     &[]int{4096}[0],
+		Embeddings:  &[]bool{false}[0],
+		NParallel:   &[]int{1}[0],
+		ThreadsHttp: &[]int{4}[0],
+	}
+
+	_, err := client.CreateEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.DeleteEndpoint(endpoint.Name)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func TestVllmImage(t *testing.T) {
+	endpoint := newCreateEndpointRequest()
+	endpoint.Model.Image.Huggingface = nil
+	endpoint.Model.Image.Vllm = &Vllm{
+		URL:                 "vllm/vllm-openai:latest",
+		KvCacheDtype:        &[]string{"auto"}[0],
+		MaxNumBatchedTokens: &[]int{8192}[0],
+		MaxNumSeqs:          &[]int{256}[0],
+		TensorParallelSize:  &[]int{1}[0],
+	}
+
+	_, err := client.CreateEndpoint(endpoint)
+	if err != nil {
+		panic(err)
+	}
+
+	err = client.DeleteEndpoint(endpoint.Name)
+	if err != nil {
+		panic(err)
+	}
+}

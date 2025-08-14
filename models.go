@@ -74,9 +74,9 @@ type Image struct {
 	Custom      *Custom      `json:"custom,omitempty"`
 	Tei         *Tei         `json:"tei,omitempty"`
 	Tgi         *Tgi         `json:"tgi,omitempty"`
-	TgiTpu      *TgiTpu      `json:"tgiTpu,omitempty"`
 	TgiNeuron   *TgiNeuron   `json:"tgiNeuron,omitempty"`
 	Llamacpp    *Llamacpp    `json:"llamacpp,omitempty"`
+	Vllm        *Vllm        `json:"vLLM,omitempty"`
 }
 
 type Tei struct {
@@ -111,17 +111,6 @@ type TgiNeuron struct {
 	HfNumCores            *int    `json:"hfNumCores,omitempty"`
 }
 
-type TgiTpu struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
-	Port                  *int    `json:"port,omitempty"`
-	URL                   string  `json:"url"`
-	MaxBatchPrefillTokens *int    `json:"maxBatchPrefillTokens,omitempty"`
-	MaxBatchTotalTokens   *int    `json:"maxBatchTotalTokens,omitempty"`
-	MaxInputLength        *int    `json:"maxInputLength,omitempty"`
-	MaxTotalTokens        *int    `json:"maxTotalTokens,omitempty"`
-	DisableCustomKernels  *bool   `json:"disableCustomKernels,omitempty"`
-	Quantize              *string `json:"quantize,omitempty"`
-}
 
 type Tgi struct {
 	HealthRoute           *string `json:"health_route,omitempty"`
@@ -145,6 +134,16 @@ type Custom struct {
 type Credentials struct {
 	Password string `json:"password"`
 	Username string `json:"username"`
+}
+
+type Vllm struct {
+	HealthRoute         *string `json:"health_route,omitempty"`
+	Port                *int    `json:"port,omitempty"`
+	URL                 string  `json:"url"`
+	KvCacheDtype        *string `json:"kvCacheDtype,omitempty"`
+	MaxNumBatchedTokens *int    `json:"maxNumBatchedTokens,omitempty"`
+	MaxNumSeqs          *int    `json:"maxNumSeqs,omitempty"`
+	TensorParallelSize  *int    `json:"tensorParallelSize,omitempty"`
 }
 
 type Huggingface struct{}
