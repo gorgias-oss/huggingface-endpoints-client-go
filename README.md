@@ -15,7 +15,7 @@ This is a Go client library for interacting with HuggingFace's endpoints API. It
 To install the package, run:
 
 ```sh
-go get github.com/issamemari/huggingface-endpoints-client-go
+go get github.com/gorgias-oss/huggingface-endpoints-client-go
 ```
 
 ## Usage
