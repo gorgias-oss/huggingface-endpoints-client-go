@@ -144,6 +144,9 @@ type Vllm struct {
 	MaxNumBatchedTokens *int    `json:"maxNumBatchedTokens,omitempty"`
 	MaxNumSeqs          *int    `json:"maxNumSeqs,omitempty"`
 	TensorParallelSize  *int    `json:"tensorParallelSize,omitempty"`
+	MaxModelLen         *int    `json:"maxModelLen,omitempty"`
+	GpuMemoryUtilization *float64 `json:"gpuMemoryUtilization,omitempty"`
+	EnforceEager        *bool   `json:"enforceEager,omitempty"`
 }
 
 type Huggingface struct{}
