@@ -111,7 +111,6 @@ type TgiNeuron struct {
 	HfNumCores            *int    `json:"hfNumCores,omitempty"`
 }
 
-
 type Tgi struct {
 	HealthRoute           *string `json:"health_route,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
@@ -137,16 +136,18 @@ type Credentials struct {
 }
 
 type Vllm struct {
-	HealthRoute         *string `json:"health_route,omitempty"`
-	Port                *int    `json:"port,omitempty"`
-	URL                 string  `json:"url"`
-	KvCacheDtype        *string `json:"kvCacheDtype,omitempty"`
-	MaxNumBatchedTokens *int    `json:"maxNumBatchedTokens,omitempty"`
-	MaxNumSeqs          *int    `json:"maxNumSeqs,omitempty"`
-	TensorParallelSize  *int    `json:"tensorParallelSize,omitempty"`
-	MaxModelLen         *int    `json:"maxModelLen,omitempty"`
+	HealthRoute          *string  `json:"health_route,omitempty"`
+	Port                 *int     `json:"port,omitempty"`
+	URL                  string   `json:"url"`
+	KvCacheDtype         *string  `json:"kvCacheDtype,omitempty"`
+	MaxNumBatchedTokens  *int     `json:"maxNumBatchedTokens,omitempty"`
+	MaxNumSeqs           *int     `json:"maxNumSeqs,omitempty"`
+	TensorParallelSize   *int     `json:"tensorParallelSize,omitempty"`
+	MaxModelLen          *int     `json:"maxModelLen,omitempty"`
 	GpuMemoryUtilization *float64 `json:"gpuMemoryUtilization,omitempty"`
-	EnforceEager        *bool   `json:"enforceEager,omitempty"`
+	EnforceEager         *bool    `json:"enforceEager,omitempty"`
+	BlockSize            *int     `json:"blockSize,omitempty"`
+	SwapSpace            *int     `json:"swapSpace,omitempty"`
 }
 
 type Huggingface struct{}
