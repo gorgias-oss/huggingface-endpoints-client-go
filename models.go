@@ -24,6 +24,8 @@ type Status struct {
 	Message       string  `json:"message"`
 	ReadyReplica  int     `json:"readyReplica"`
 	TargetReplica int     `json:"targetReplica"`
+	URL           string  `json:"url"`
+	LastUsedAt    string  `json:"lastUsedAt"`
 }
 
 type CreateEndpointRequest struct {
