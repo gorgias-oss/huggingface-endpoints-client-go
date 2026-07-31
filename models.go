@@ -80,7 +80,7 @@ type Image struct {
 }
 
 type Tei struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchTokens        *int    `json:"maxBatchTokens,omitempty"`
@@ -89,7 +89,7 @@ type Tei struct {
 }
 
 type Llamacpp struct {
-	HealthRoute *string `json:"health_route,omitempty"`
+	HealthRoute *string `json:"healthRoute,omitempty"`
 	Port        *int    `json:"port,omitempty"`
 	URL         string  `json:"url"`
 	CtxSize     *int    `json:"ctxSize,omitempty"`
@@ -100,7 +100,7 @@ type Llamacpp struct {
 }
 
 type TgiNeuron struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchPrefillTokens *int    `json:"maxBatchPrefillTokens,omitempty"`
@@ -113,7 +113,7 @@ type TgiNeuron struct {
 
 
 type Tgi struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchPrefillTokens *int    `json:"maxBatchPrefillTokens,omitempty"`
@@ -126,7 +126,7 @@ type Tgi struct {
 
 type Custom struct {
 	Credentials *Credentials `json:"credentials,omitempty"`
-	HealthRoute *string      `json:"health_route,omitempty"`
+	HealthRoute *string      `json:"healthRoute,omitempty"`
 	Port        *int         `json:"port,omitempty"` // Constraints: Min 0, Default: 80
 	URL         string       `json:"url"`
 }
@@ -137,7 +137,7 @@ type Credentials struct {
 }
 
 type Vllm struct {
-	HealthRoute         *string `json:"health_route,omitempty"`
+	HealthRoute         *string `json:"healthRoute,omitempty"`
 	Port                *int    `json:"port,omitempty"`
 	URL                 string  `json:"url"`
 	KvCacheDtype        *string `json:"kvCacheDtype,omitempty"`
