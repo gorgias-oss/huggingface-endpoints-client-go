@@ -39,6 +39,7 @@ type UpdateEndpointRequest struct {
 	Compute *Compute `json:"compute,omitempty"`
 	Model   *Model   `json:"model,omitempty"`
 	Type    *string  `json:"type,omitempty"`
+	Provider *Provider `json:"provider,omitempty"`
 }
 
 type Compute struct {
