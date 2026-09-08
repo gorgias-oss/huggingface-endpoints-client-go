@@ -1,345 +1,180 @@
 package huggingface
 
 import (
-	"fmt"
-	"math/rand"
-	"os"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
-	"time"
 )
 
-var client *Client
-
-func TestMain(m *testing.M) {
-	host := "https://api.endpoints.huggingface.cloud/v2/endpoint"
-	namespace := os.Getenv("HUGGINGFACE_NAMESPACE")
-	token := os.Getenv("HUGGINGFACE_TOKEN")
-
-	var err error
-	client, err = NewClient(&host, &namespace, &token)
+func testClient(t *testing.T, handler http.HandlerFunc) *Client {
+	t.Helper()
+	server := httptest.NewServer(handler)
+	t.Cleanup(server.Close)
+	namespace, token := "test-namespace", "test-token"
+	client, err := NewClient(&server.URL, &namespace, &token)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	m.Run()
-}
-
-func randomString(n int) string {
-	const letters = "abcdefghijklmnopqrstuvwxyz"
-	rng := rand.New(rand.NewSource(time.Now().UnixNano()))
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letters[rng.Intn(len(letters))]
-	}
-	return string(b)
-}
-
-func newCreateEndpointRequest() CreateEndpointRequest {
-	name := fmt.Sprintf("test-endpoint-%s", randomString(4))
-	scaleToZeroTimeout := 15
-	revision := "main"
-	task := "sentence-embeddings"
-	pendingRequests := 1.5
-	return CreateEndpointRequest{
-		AccountId: nil,
-		Compute: Compute{
-			Accelerator:  "cpu",
-			InstanceSize: "x4",
-			InstanceType: "intel-spr",
-			Scaling: Scaling{
-				MinReplica: 0,
-				MaxReplica: 1,
-				Measure: &Measure{
-					PendingRequests: &pendingRequests,
-					HardwareUsage:   nil,
-				},
-				ScaleToZeroTimeout: &scaleToZeroTimeout,
-			},
-		},
-		Model: Model{
-			Framework: "pytorch",
-			Image: Image{
-				Huggingface: &Huggingface{},
-			},
-			Repository: "sentence-transformers/all-MiniLM-L6-v2",
-			Revision:   &revision,
-			Task:       &task,
-			Env:        map[string]string{},
-		},
-		Name: name,
-		Provider: Provider{
-			Region: "us-east-1",
-			Vendor: "aws",
-		},
-		Type: "protected",
-	}
-}
-
-func newCreateEndpointRequestWithCustomImage() CreateEndpointRequest {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Custom = &Custom{
-		Credentials: &Credentials{
-			Password: "password",
-			Username: "username",
-		},
-		HealthRoute: nil,
-		Port:        nil,
-		URL:         "https://example.com",
-	}
-	endpoint.Model.Env = map[string]string{
-		"key": "value",
-	}
-	endpoint.Model.Image.Huggingface = nil
-	return endpoint
-}
-
-func TestCustomImage(t *testing.T) {
-	endpoint := newCreateEndpointRequestWithCustomImage()
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestNilCredentials(t *testing.T) {
-	endpoint := newCreateEndpointRequestWithCustomImage()
-	endpoint.Model.Image.Custom.Credentials = nil
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestEmptyEnv(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Env = map[string]string{}
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
+	return client
 }
 
 func TestListEndpoints(t *testing.T) {
-	_, err := client.ListEndpoints()
+	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/test-namespace" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"items":[]}`))
+	})
+
+	endpoints, err := client.ListEndpoints()
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
+	}
+	if len(endpoints) != 0 {
+		t.Fatalf("got %d endpoints, want 0", len(endpoints))
 	}
 }
 
-func TestCreateAndDeleteEndpoint(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
+func TestCreateEndpoint(t *testing.T) {
+	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/test-namespace" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var request CreateEndpointRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if request.Name != "example" {
+			t.Errorf("got endpoint name %q, want %q", request.Name, "example")
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"name":"example"}`))
+	})
 
-	_, err := client.CreateEndpoint(endpoint)
+	endpoint, err := client.CreateEndpoint(CreateEndpointRequest{Name: "example"})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	if endpoint.Name != "example" {
+		t.Fatalf("got endpoint name %q, want %q", endpoint.Name, "example")
 	}
 }
 
-func TestGetEndpoint(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
+func TestGetEndpointParsesStatusURLAndLastUsedAt(t *testing.T) {
+	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet || r.URL.Path != "/test-namespace/example" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"name":"example","status":{"url":"https://example.endpoints.huggingface.cloud","lastUsedAt":"2026-07-31T13:41:02Z"}}`))
+	})
 
-	_, err := client.CreateEndpoint(endpoint)
+	endpoint, err := client.GetEndpoint("example")
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	_, err = client.GetEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	if endpoint.Status.URL != "https://example.endpoints.huggingface.cloud" {
+		t.Fatalf("got URL %q", endpoint.Status.URL)
 	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	if endpoint.Status.LastUsedAt != "2026-07-31T13:41:02Z" {
+		t.Fatalf("got LastUsedAt %q", endpoint.Status.LastUsedAt)
 	}
 }
 
-func TestUpdateEndpoint(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
+func TestUpdateEndpointMarshalsProvider(t *testing.T) {
+	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPut || r.URL.Path != "/test-namespace/example" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		var request UpdateEndpointRequest
+		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if request.Provider == nil || request.Provider.Region != "us-east-1" || request.Provider.Vendor != "aws" {
+			t.Errorf("got provider %#v", request.Provider)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		_, _ = w.Write([]byte(`{"name":"example"}`))
+	})
 
-	_, err := client.CreateEndpoint(endpoint)
+	_, err := client.UpdateEndpoint("example", UpdateEndpointRequest{
+		Provider: &Provider{Region: "us-east-1", Vendor: "aws"},
+	})
 	if err != nil {
-		panic(err)
-	}
-
-	updateEndpointRequest := UpdateEndpointRequest{
-		Compute: &Compute{
-			Accelerator:  "cpu",
-			InstanceSize: "x8",
-			InstanceType: "intel-spr",
-			Scaling: Scaling{
-				MinReplica: 0,
-				MaxReplica: 1,
-			},
-		},
-		Model: &endpoint.Model,
-		Type:  nil,
-	}
-
-	_, err = client.UpdateEndpoint(endpoint.Name, updateEndpointRequest)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 }
 
-func TestOptionalFields(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Revision = nil
-	endpoint.Compute.Scaling.ScaleToZeroTimeout = nil
+func TestDeleteEndpoint(t *testing.T) {
+	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodDelete || r.URL.Path != "/test-namespace/example" {
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
 
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestTeiImage(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Huggingface = nil
-	endpoint.Model.Image.Tei = &Tei{
-		URL:                   "ghcr.io/huggingface/text-embeddings-inference:1.2",
-		MaxBatchTokens:        &[]int{8192}[0],
-		MaxConcurrentRequests: &[]int{512}[0],
-		Pooling:               &[]string{"mean"}[0],
-	}
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	if err := client.DeleteEndpoint("example"); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestTgiImage(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Huggingface = nil
-	endpoint.Model.Image.Tgi = &Tgi{
-		URL:                   "ghcr.io/huggingface/text-generation-inference:1.4",
-		MaxBatchPrefillTokens: &[]int{4096}[0],
-		MaxBatchTotalTokens:   &[]int{8192}[0],
-		MaxInputLength:        &[]int{4096}[0],
-		MaxTotalTokens:        &[]int{8192}[0],
-		Quantize:              &[]string{"bitsandbytes"}[0],
+func TestHealthRouteMarshalsCamelCase(t *testing.T) {
+	healthRoute := "/health"
+	images := []struct {
+		name  string
+		image any
+	}{
+		{"tei", Tei{HealthRoute: &healthRoute}},
+		{"llamacpp", Llamacpp{HealthRoute: &healthRoute}},
+		{"tgi-neuron", TgiNeuron{HealthRoute: &healthRoute}},
+		{"tgi", Tgi{HealthRoute: &healthRoute}},
+		{"custom", Custom{HealthRoute: &healthRoute}},
+		{"vllm", Vllm{HealthRoute: &healthRoute}},
 	}
 
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestTgiNeuronImage(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Huggingface = nil
-	endpoint.Model.Image.TgiNeuron = &TgiNeuron{
-		URL:                   "ghcr.io/huggingface/neuronx-tgi:0.0.15",
-		MaxBatchPrefillTokens: &[]int{4096}[0],
-		MaxBatchTotalTokens:   &[]int{8192}[0],
-		MaxInputLength:        &[]int{4096}[0],
-		MaxTotalTokens:        &[]int{8192}[0],
-		HfAutoCastType:        &[]string{"bf16"}[0],
-		HfNumCores:            &[]int{2}[0],
-	}
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	for _, test := range images {
+		t.Run(test.name, func(t *testing.T) {
+			body, err := json.Marshal(test.image)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.Contains(string(body), `"healthRoute":"/health"`) {
+				t.Fatalf("expected healthRoute in %s", body)
+			}
+			if strings.Contains(string(body), "health_route") {
+				t.Fatalf("unexpected health_route in %s", body)
+			}
+		})
 	}
 }
 
-func TestLlamacppImage(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Huggingface = nil
-	endpoint.Model.Image.Llamacpp = &Llamacpp{
-		URL:         "ghcr.io/ggerganov/llama.cpp:server",
-		ModelPath:   "/app/model.gguf",
-		CtxSize:     &[]int{4096}[0],
-		Embeddings:  &[]bool{false}[0],
-		NParallel:   &[]int{1}[0],
-		ThreadsHttp: &[]int{4}[0],
-	}
-
-	_, err := client.CreateEndpoint(endpoint)
+func TestVllmMarshalsServerArgs(t *testing.T) {
+	body, err := json.Marshal(Vllm{ServerArgs: []string{
+		"--enable-auto-tool-choice",
+		"--tool-call-parser",
+		"hermes",
+	}})
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func TestVllmImage(t *testing.T) {
-	endpoint := newCreateEndpointRequest()
-	endpoint.Model.Image.Huggingface = nil
-	endpoint.Model.Image.Vllm = &Vllm{
-		URL:                  "vllm/vllm-openai:latest",
-		KvCacheDtype:         &[]string{"fp8"}[0],
-		MaxNumBatchedTokens:  &[]int{8192}[0],
-		MaxNumSeqs:           &[]int{256}[0],
-		TensorParallelSize:   &[]int{1}[0],
-		MaxModelLen:          &[]int{4096}[0],
-		GpuMemoryUtilization: &[]float64{0.9}[0],
-		EnforceEager:         &[]bool{false}[0],
-		BlockSize:            &[]int{16}[0],
-		SwapSpace:            &[]int{4}[0],
-	}
-
-	_, err := client.CreateEndpoint(endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	err = client.DeleteEndpoint(endpoint.Name)
-	if err != nil {
-		panic(err)
+	if !strings.Contains(string(body), `"serverArgs":["--enable-auto-tool-choice","--tool-call-parser","hermes"]`) {
+		t.Fatalf("expected serverArgs in %s", body)
 	}
 }
