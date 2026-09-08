@@ -3,6 +3,7 @@ package huggingface
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -11,8 +12,8 @@ var client *Client
 
 func TestMain(m *testing.M) {
 	host := "https://api.endpoints.huggingface.cloud/v2/endpoint"
-	namespace := "issamemari"
-	token := ""
+	namespace := os.Getenv("HUGGINGFACE_NAMESPACE")
+	token := os.Getenv("HUGGINGFACE_TOKEN")
 
 	var err error
 	client, err = NewClient(&host, &namespace, &token)
@@ -44,7 +45,7 @@ func newCreateEndpointRequest() CreateEndpointRequest {
 		Compute: Compute{
 			Accelerator:  "cpu",
 			InstanceSize: "x4",
-			InstanceType: "intel-icl",
+			InstanceType: "intel-spr",
 			Scaling: Scaling{
 				MinReplica: 0,
 				MaxReplica: 1,
@@ -188,7 +189,7 @@ func TestUpdateEndpoint(t *testing.T) {
 		Compute: &Compute{
 			Accelerator:  "cpu",
 			InstanceSize: "x8",
-			InstanceType: "intel-icl",
+			InstanceType: "intel-spr",
 			Scaling: Scaling{
 				MinReplica: 0,
 				MaxReplica: 1,
@@ -320,11 +321,16 @@ func TestVllmImage(t *testing.T) {
 	endpoint := newCreateEndpointRequest()
 	endpoint.Model.Image.Huggingface = nil
 	endpoint.Model.Image.Vllm = &Vllm{
-		URL:                 "vllm/vllm-openai:latest",
-		KvCacheDtype:        &[]string{"auto"}[0],
-		MaxNumBatchedTokens: &[]int{8192}[0],
-		MaxNumSeqs:          &[]int{256}[0],
-		TensorParallelSize:  &[]int{1}[0],
+		URL:                  "vllm/vllm-openai:latest",
+		KvCacheDtype:         &[]string{"fp8"}[0],
+		MaxNumBatchedTokens:  &[]int{8192}[0],
+		MaxNumSeqs:           &[]int{256}[0],
+		TensorParallelSize:   &[]int{1}[0],
+		MaxModelLen:          &[]int{4096}[0],
+		GpuMemoryUtilization: &[]float64{0.9}[0],
+		EnforceEager:         &[]bool{false}[0],
+		BlockSize:            &[]int{16}[0],
+		SwapSpace:            &[]int{4}[0],
 	}
 
 	_, err := client.CreateEndpoint(endpoint)
