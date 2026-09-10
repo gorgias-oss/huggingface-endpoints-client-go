@@ -1,0 +1,25 @@
+name: Integration tests
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      HUGGINGFACE_NAMESPACE: ${{ secrets.HUGGINGFACE_NAMESPACE }}
+      HUGGINGFACE_TOKEN: ${{ secrets.HUGGINGFACE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Verify credentials
+        run: |
+          if [ -z "$HUGGINGFACE_NAMESPACE" ] || [ -z "$HUGGINGFACE_TOKEN" ]; then
+            exit 1
+          fi
+      - run: go test -count=1 -tags=integration ./...

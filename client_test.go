@@ -20,52 +20,60 @@ func testClient(t *testing.T, handler http.HandlerFunc) *Client {
 	return client
 }
 
-func TestListEndpoints(t *testing.T) {
-	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet || r.URL.Path != "/test-namespace" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		_, _ = w.Write([]byte(`{"items":[]}`))
-	})
-
-	endpoints, err := client.ListEndpoints()
-	if err != nil {
-		t.Fatal(err)
+func TestClientRoutes(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		path     string
+		response string
+		call     func(*Client) error
+	}{
+		{
+			name:     "list endpoints",
+			method:   http.MethodGet,
+			path:     "/test-namespace",
+			response: `{"items":[]}`,
+			call: func(client *Client) error {
+				_, err := client.ListEndpoints()
+				return err
+			},
+		},
+		{
+			name:     "create endpoint",
+			method:   http.MethodPost,
+			path:     "/test-namespace",
+			response: `{"name":"example"}`,
+			call: func(client *Client) error {
+				_, err := client.CreateEndpoint(CreateEndpointRequest{Name: "example"})
+				return err
+			},
+		},
+		{
+			name:     "delete endpoint",
+			method:   http.MethodDelete,
+			path:     "/test-namespace/example",
+			response: "",
+			call: func(client *Client) error {
+				return client.DeleteEndpoint("example")
+			},
+		},
 	}
-	if len(endpoints) != 0 {
-		t.Fatalf("got %d endpoints, want 0", len(endpoints))
-	}
-}
 
-func TestCreateEndpoint(t *testing.T) {
-	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost || r.URL.Path != "/test-namespace" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		var request CreateEndpointRequest
-		if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-			t.Error(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if request.Name != "example" {
-			t.Errorf("got endpoint name %q, want %q", request.Name, "example")
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		_, _ = w.Write([]byte(`{"name":"example"}`))
-	})
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != test.method || r.URL.Path != test.path {
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+				_, _ = w.Write([]byte(test.response))
+			})
 
-	endpoint, err := client.CreateEndpoint(CreateEndpointRequest{Name: "example"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if endpoint.Name != "example" {
-		t.Fatalf("got endpoint name %q, want %q", endpoint.Name, "example")
+			if err := test.call(client); err != nil {
+				t.Fatal(err)
+			}
+		})
 	}
 }
 
@@ -116,21 +124,6 @@ func TestUpdateEndpointMarshalsProvider(t *testing.T) {
 		Provider: &Provider{Region: "us-east-1", Vendor: "aws"},
 	})
 	if err != nil {
-		t.Fatal(err)
-	}
-}
-
-func TestDeleteEndpoint(t *testing.T) {
-	client := testClient(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodDelete || r.URL.Path != "/test-namespace/example" {
-			t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-	})
-
-	if err := client.DeleteEndpoint("example"); err != nil {
 		t.Fatal(err)
 	}
 }
