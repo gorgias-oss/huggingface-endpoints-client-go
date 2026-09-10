@@ -24,6 +24,8 @@ type Status struct {
 	Message       string  `json:"message"`
 	ReadyReplica  int     `json:"readyReplica"`
 	TargetReplica int     `json:"targetReplica"`
+	URL           string  `json:"url"`
+	LastUsedAt    string  `json:"lastUsedAt"`
 }
 
 type CreateEndpointRequest struct {
@@ -36,9 +38,10 @@ type CreateEndpointRequest struct {
 }
 
 type UpdateEndpointRequest struct {
-	Compute *Compute `json:"compute,omitempty"`
-	Model   *Model   `json:"model,omitempty"`
-	Type    *string  `json:"type,omitempty"`
+	Compute  *Compute  `json:"compute,omitempty"`
+	Model    *Model    `json:"model,omitempty"`
+	Type     *string   `json:"type,omitempty"`
+	Provider *Provider `json:"provider,omitempty"`
 }
 
 type Compute struct {
@@ -80,7 +83,7 @@ type Image struct {
 }
 
 type Tei struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchTokens        *int    `json:"maxBatchTokens,omitempty"`
@@ -89,7 +92,7 @@ type Tei struct {
 }
 
 type Llamacpp struct {
-	HealthRoute *string `json:"health_route,omitempty"`
+	HealthRoute *string `json:"healthRoute,omitempty"`
 	Port        *int    `json:"port,omitempty"`
 	URL         string  `json:"url"`
 	CtxSize     *int    `json:"ctxSize,omitempty"`
@@ -100,7 +103,7 @@ type Llamacpp struct {
 }
 
 type TgiNeuron struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchPrefillTokens *int    `json:"maxBatchPrefillTokens,omitempty"`
@@ -112,7 +115,7 @@ type TgiNeuron struct {
 }
 
 type Tgi struct {
-	HealthRoute           *string `json:"health_route,omitempty"`
+	HealthRoute           *string `json:"healthRoute,omitempty"`
 	Port                  *int    `json:"port,omitempty"`
 	URL                   string  `json:"url"`
 	MaxBatchPrefillTokens *int    `json:"maxBatchPrefillTokens,omitempty"`
@@ -125,7 +128,7 @@ type Tgi struct {
 
 type Custom struct {
 	Credentials *Credentials `json:"credentials,omitempty"`
-	HealthRoute *string      `json:"health_route,omitempty"`
+	HealthRoute *string      `json:"healthRoute,omitempty"`
 	Port        *int         `json:"port,omitempty"` // Constraints: Min 0, Default: 80
 	URL         string       `json:"url"`
 }
@@ -136,7 +139,7 @@ type Credentials struct {
 }
 
 type Vllm struct {
-	HealthRoute          *string  `json:"health_route,omitempty"`
+	HealthRoute          *string  `json:"healthRoute,omitempty"`
 	Port                 *int     `json:"port,omitempty"`
 	URL                  string   `json:"url"`
 	KvCacheDtype         *string  `json:"kvCacheDtype,omitempty"`
@@ -148,6 +151,7 @@ type Vllm struct {
 	EnforceEager         *bool    `json:"enforceEager,omitempty"`
 	BlockSize            *int     `json:"blockSize,omitempty"`
 	SwapSpace            *int     `json:"swapSpace,omitempty"`
+	ServerArgs           []string `json:"serverArgs,omitempty"`
 }
 
 type Huggingface struct{}
